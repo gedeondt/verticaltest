@@ -1,18 +1,24 @@
 import http from 'http';
 import { createClient, CreateClientCommand } from './client/create';
+import { initKafka, publishEvent } from './kafka';
 
 const PORT = 8080;
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/client/create') {
     let body = '';
     req.on('data', chunk => {
       body += chunk;
     });
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const command: CreateClientCommand = JSON.parse(body);
         const event = createClient(command);
+        try {
+          await publishEvent('client-events', event);
+        } catch (err) {
+          console.error('Failed to publish event', err);
+        }
         res.setHeader('Content-Type', 'application/json');
         res.writeHead(200);
         res.end(JSON.stringify(event));
@@ -27,6 +33,12 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+initKafka()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('Unable to initialize Kafka', err);
+  });
