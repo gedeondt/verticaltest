@@ -18,6 +18,9 @@ node dist/index.js
 
 The server listens on `http://localhost:8080`.
 
+The application expects a Kafka broker running on `localhost:9092`. Events are
+published to the `client-events` topic when a new client is created.
+
 ## API
 
 `POST /client/create`
